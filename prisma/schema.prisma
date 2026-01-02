@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  name          String
+  category      String
+  sellPrice     Int
+  stock         Int
+  ownershipType OwnershipType
+  partnerId     String?
+
+  partner       ConsignmentPartner? @relation(fields: [partnerId], references: [id])
+  items         TransactionItem[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Transaction {
+  id            String   @id @default(uuid())
+  date          DateTime @default(now())
+  totalAmount   Int
+  paymentType   PaymentType
+
+  items         TransactionItem[]
+  debt          Debt?
+
+  createdAt     DateTime @default(now())
+}
+
+model TransactionItem {
+  id             String @id @default(uuid())
+  transactionId  String
+  productId      String
+  qty            Int
+  sellPriceSnap  Int
+  subtotal       Int
+
+  transaction    Transaction @relation(fields: [transactionId], references: [id])
+  product        Product     @relation(fields: [productId], references: [id])
+}
+
+model Debt {
+  id             String   @id @default(uuid())
+  customerName   String
+  transactionId  String   @unique
+  amount         Int
+  status         DebtStatus
+
+  transaction    Transaction @relation(fields: [transactionId], references: [id])
+
+  createdAt      DateTime @default(now())
+  paidAt         DateTime?
+}
+
+model ConsignmentPartner {
+  id         String   @id @default(uuid())
+  name       String
+  balance    Int      @default(0)
+
+  products   Product[]
+
+  createdAt  DateTime @default(now())
+}
+
+enum PaymentType {
+  CASH
+  DEBT
+}
+
+enum OwnershipType {
+  OWN
+  CONSIGNMENT
+}
+
+enum DebtStatus {
+  UNPAID
+  PAID
+}

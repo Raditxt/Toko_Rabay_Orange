@@ -1,36 +1,145 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Toko Rabay Orange System — MVP v1
 
-## Getting Started
+Operational system for family/home store (MVP v1) with focus on:
+- Product inventory
+- Sales (cash / credit)
+- Consignment
+- Concise dashboard for critical stock, consignment balance, active credits
+- Simple but scalable data structure & workflow
 
-First, run the development server:
+> Built with **Next.js 15 + TypeScript + Prisma + PostgreSQL**
 
+---
+
+## ⚡ MVP v1 Features
+
+1. **Product Master**
+   - Name, category, selling price, stock, ownership type
+
+2. **Quick Sales**
+   - Input qty → automatic stock update
+   - Choose CASH / CREDIT
+
+3. **Credit / Debt**
+   - Automatically recorded from transactions
+
+4. **Consignment**
+   - Partner + separate balance
+
+5. **Concise Dashboard**
+   - Critical stock, today's sales, consignment balance, active credits
+
+---
+
+## 🛠️ Setup & Development
+
+1. **Clone repository:**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repo-url>
+cd toko-system
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Install dependencies:**
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Setup environment:**
+   
+   Create `.env` file:
+   ```env
+   DATABASE_URL="postgresql://user:password@localhost:5432/toko_db"
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. **Database migration:**
+```bash
+npx prisma migrate dev --name init
+```
 
-## Learn More
+5. **Run development server:**
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+6. **Open** http://localhost:3000
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🗂️ Folder Structure
 
-## Deploy on Vercel
+```text
+app/
+  ├─ page.tsx          // Dashboard
+  ├─ products/         // Product Master CRUD
+  ├─ sales/            // Transaction input
+  └─ api/              // API endpoints
+lib/
+  └─ prisma.ts         // Prisma client
+prisma/
+  └─ schema.prisma     // Database schema
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🔧 Tech Stack
+
+- **Frontend / Fullstack**: Next.js 15 + TypeScript
+- **Database**: PostgreSQL
+- **ORM**: Prisma
+- **Deployment**: Vercel / Supabase / Railway
+
+---
+
+## 🏁 Roadmap Next Steps
+
+- [ ] Implement Product Master CRUD API
+- [ ] Implement Sales + automatic stock update
+- [ ] Implement Credit / Consignment
+- [ ] Minimal UI for daily transactions
+- [ ] Concise dashboard
+- [ ] **Phase 2**: analytical reports, expiration tracking, purchase price, notifications
+
+---
+
+## 📌 Notes
+
+- **MVP Focus**: used daily, not complete features
+- Data structure & flow already adjusted for safety & scalability
+- **Do not modify transaction flow without DB migration**
+
+---
+
+## 🚀 Quick Start (For Daily Users)
+
+### Opening the App
+1. Open browser and go to: `http://localhost:3000`
+2. You'll see the main dashboard
+
+### Recording a Sale
+1. Click **"New Sale"** or **"Sales"** menu
+2. Select product from list
+3. Enter quantity
+4. Choose payment method:
+   - **CASH** - customer pays immediately
+   - **CREDIT** - customer pays later (recorded as debt)
+5. Click **"Save"**
+6. Stock will automatically decrease
+
+### Checking Stock
+1. Go to **"Products"** menu
+2. Red/orange colored items = low stock
+3. Add new products by clicking **"Add Product"**
+
+### Checking Customer Credits
+1. Go to **"Credits"** menu
+2. You can see who owes money and how much
+3. When customer pays, click **"Record Payment"**
+
+### Consignment Products
+1. Products owned by partners/suppliers
+2. When sold, profit goes to consignment balance
+3. Check balance in **"Consignment"** menu
+
+---
+
+**That's it! The system is designed to be simple for daily use. For technical questions, contact the developer.**
