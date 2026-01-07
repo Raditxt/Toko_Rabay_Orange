@@ -1,45 +1,33 @@
 export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const { name } = body;
 
-    const {
-      name,
-      category,
-      sellPrice,
-      stock,
-      ownershipType,
-      partnerId,
-    } = body;
-
-    if (!name || !sellPrice || stock === undefined || !ownershipType) {
+    if (!name) {
       return NextResponse.json(
-        { error: "Field wajib belum lengkap" },
+        { error: "Nama partner wajib diisi" },
         { status: 400 }
       );
     }
 
-    const product = await prisma.product.create({
+    const partner = await prisma.consignmentPartner.create({
       data: {
         name,
-        category: category || "Umum",
-        sellPrice,
-        stock,
-        ownershipType,
-        partnerId: ownershipType === "CONSIGNMENT" ? partnerId : null,
       },
     });
 
-    return NextResponse.json(product);
+    return NextResponse.json(partner);
   } catch (error: unknown) {
-    console.error("Error creating product:", error);
+    console.error("Error creating consignment partner:", error);
     
     const errorMessage = error instanceof Error 
       ? error.message 
-      : "Gagal menambah barang";
+      : "Gagal membuat partner titipan";
     
     return NextResponse.json(
       { error: errorMessage },
@@ -50,17 +38,17 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
-    const products = await prisma.product.findMany({
+    const partners = await prisma.consignmentPartner.findMany({
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(products);
+    return NextResponse.json(partners);
   } catch (error: unknown) {
-    console.error("Error fetching products:", error);
+    console.error("Error fetching consignment partners:", error);
     
     const errorMessage = error instanceof Error 
       ? error.message 
-      : "Gagal mengambil data barang";
+      : "Gagal mengambil partner titipan";
     
     return NextResponse.json(
       { error: errorMessage },
