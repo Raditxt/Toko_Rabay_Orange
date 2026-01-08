@@ -92,12 +92,18 @@ prisma/
 
 ## 🏁 Roadmap Next Steps
 
-- [ ] Implement Product Master CRUD API
-- [ ] Implement Sales + automatic stock update
-- [ ] Implement Credit / Consignment
-- [ ] Minimal UI for daily transactions
-- [ ] Concise dashboard
+- [x] Implement Product Master CRUD API
+- [x] Implement Sales + automatic stock update
+- [x] Implement Credit / Consignment
+- [x] Minimal UI for daily transactions
+- [x] Concise dashboard
 - [ ] **Phase 2**: analytical reports, expiration tracking, purchase price, notifications
+
+---
+
+## 📝 Changelog
+
+- **January 8, 2026**: Implemented API endpoints for products, transactions, debts, and consignment partners. Added pages for products and sales management. Updated README to reflect completed MVP v1 features.
 
 ---
 
