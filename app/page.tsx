@@ -1,66 +1,80 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+
+type Summary = {
+  salesToday: number;
+  activeDebts: number;
+  consignmentBalance: number;
+};
+
+type Product = {
+  id: string;
+  name: string;
+  stock: number;
+};
+
+export default function DashboardPage() {
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [lowStock, setLowStock] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/dashboard/summary").then((r) => r.json()),
+      fetch("/api/dashboard/alerts").then((r) => r.json()),
+    ]).then(([summaryData, alertData]) => {
+      setSummary(summaryData);
+      setLowStock(alertData.lowStock || []);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) return <div style={{ padding: 16 }}>Loading...</div>;
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div
+      style={{
+        padding: 16,
+        maxWidth: 480,
+        margin: "0 auto",
+        fontFamily: "system-ui, sans-serif",
+      }}
+    >
+      <h2 style={{ marginBottom: 12 }}>📊 Dashboard Toko</h2>
+
+      <div
+        style={{
+          background: "#111",
+          color: "#fff",
+          padding: 12,
+          borderRadius: 8,
+          marginBottom: 16,
+        }}
+      >
+        <div>💰 Penjualan Hari Ini</div>
+        <strong>Rp {summary?.salesToday.toLocaleString()}</strong>
+      </div>
+
+      <div style={{ marginBottom: 8 }}>
+        🧾 Bon Aktif:{" "}
+        <strong>Rp {summary?.activeDebts.toLocaleString()}</strong>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        🤝 Saldo Titipan:{" "}
+        <strong>Rp {summary?.consignmentBalance.toLocaleString()}</strong>
+      </div>
+
+      <h4>🔴 Stok Kritis</h4>
+
+      {lowStock.length === 0 && <div>Aman 👍</div>}
+
+      {lowStock.map((p) => (
+        <div key={p.id}>
+          {p.name} — sisa {p.stock}
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      ))}
     </div>
   );
 }
