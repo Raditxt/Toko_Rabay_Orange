@@ -18,6 +18,7 @@ interface TransactionRequestBody {
   paymentType: PaymentType;
   customerName?: string;
   items: TransactionItemRequest[];
+  clientTransactionId?: string;
 }
 
 // Define interfaces for product data
@@ -54,8 +55,27 @@ export async function POST(req: Request) {
       );
     }
 
+    // 🔐 Tambahkan VALIDASI DI AWAL
+    if (items.some(i => i.qty <= 0)) {
+      return NextResponse.json(
+        { error: "Qty harus lebih dari 0" },
+        { status: 400 }
+      );
+    }
+
     // ===== ATOMIC TRANSACTION =====
     const transaction = await prisma.$transaction(async (tx) => {
+      // 🔐 Tambahkan ANTI DOUBLE SUBMIT (KRUSIAL)
+      if (body.clientTransactionId) {
+        const exists = await tx.transaction.findFirst({
+          where: { clientTransactionId: body.clientTransactionId },
+        });
+
+        if (exists) {
+          throw new Error("Transaksi ini sudah diproses sebelumnya");
+        }
+      }
+
       const productIds = items.map((i) => i.productId);
 
       const products = await tx.product.findMany({
@@ -99,10 +119,12 @@ export async function POST(req: Request) {
       });
 
       // ===== CREATE TRANSACTION =====
+      // 🔐 Simpan ID ke transaction.create
       const trx = await tx.transaction.create({
         data: {
           paymentType,
           totalAmount,
+          clientTransactionId: body.clientTransactionId,
         },
       });
 
@@ -150,6 +172,11 @@ export async function POST(req: Request) {
         });
       }
 
+      // 🧾 Tambahkan LOGGING MINIMAL (WORTH IT)
+      console.log(
+        `[TRANSACTION OK] ${trx.id} | ${paymentType} | Total: ${totalAmount}`
+      );
+
       return trx;
     });
 
@@ -158,7 +185,8 @@ export async function POST(req: Request) {
       transactionId: transaction.id,
     });
   } catch (error: unknown) {
-    console.error("Transaction error:", error);
+    // 🧾 Tambahkan LOGGING MINIMAL (WORTH IT)
+    console.error("[TRANSACTION FAILED]", error);
     
     const errorMessage = error instanceof Error 
       ? error.message 

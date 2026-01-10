@@ -24,15 +24,16 @@ model Product {
 }
 
 model Transaction {
-  id            String   @id @default(uuid())
-  date          DateTime @default(now())
-  totalAmount   Int
-  paymentType   PaymentType
+  id                   String   @id @default(uuid())
+  clientTransactionId   String?  @unique
+  date                 DateTime @default(now())
+  totalAmount          Int
+  paymentType          PaymentType
 
-  items         TransactionItem[]
-  debt          Debt?
+  items                TransactionItem[]
+  debt                 Debt?
 
-  createdAt     DateTime @default(now())
+  createdAt            DateTime @default(now())
 }
 
 model TransactionItem {
