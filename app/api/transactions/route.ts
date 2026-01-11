@@ -8,7 +8,10 @@ import {
   DebtStatus,
 } from "@/app/generated/prisma/client";
 
-// Define interfaces for request body
+/* =====================
+   TYPES
+===================== */
+
 interface TransactionItemRequest {
   productId: string;
   qty: number;
@@ -21,26 +24,32 @@ interface TransactionRequestBody {
   clientTransactionId?: string;
 }
 
-// Define interfaces for product data
 interface ComputedTransactionItem {
   product: {
     id: string;
     name: string;
     sellPrice: number;
+    buyPrice: number | null; // ⬅️ Update: bisa null
     stock: number;
     ownershipType: OwnershipType;
     partnerId: string | null;
   };
   qty: number;
   subtotal: number;
+  buyPriceSnap: number; // ⬅️ Untuk transaksi, harus ada nilai
+  profit: number;
 }
+
+/* =====================
+   HANDLER
+===================== */
 
 export async function POST(req: Request) {
   try {
     const body: TransactionRequestBody = await req.json();
     const { paymentType, customerName, items } = body;
 
-    // ===== VALIDASI DASAR =====
+    /* ===== VALIDASI DASAR ===== */
     if (!paymentType || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { error: "Data transaksi tidak lengkap" },
@@ -48,24 +57,23 @@ export async function POST(req: Request) {
       );
     }
 
-    if (paymentType === "DEBT" && !customerName) {
+    if (paymentType === PaymentType.DEBT && !customerName) {
       return NextResponse.json(
         { error: "Nama pelanggan wajib untuk bon" },
         { status: 400 }
       );
     }
 
-    // 🔐 Tambahkan VALIDASI DI AWAL
-    if (items.some(i => i.qty <= 0)) {
+    if (items.some((i) => i.qty <= 0)) {
       return NextResponse.json(
         { error: "Qty harus lebih dari 0" },
         { status: 400 }
       );
     }
 
-    // ===== ATOMIC TRANSACTION =====
+    /* ===== ATOMIC TRANSACTION ===== */
     const transaction = await prisma.$transaction(async (tx) => {
-      // 🔐 Tambahkan ANTI DOUBLE SUBMIT (KRUSIAL)
+      /* === ANTI DOUBLE SUBMIT === */
       if (body.clientTransactionId) {
         const exists = await tx.transaction.findFirst({
           where: { clientTransactionId: body.clientTransactionId },
@@ -88,14 +96,10 @@ export async function POST(req: Request) {
 
       let totalAmount = 0;
 
-      // simpan data sementara
+      /* === HITUNG SNAPSHOT ITEM === */
       const computedItems: ComputedTransactionItem[] = items.map((item) => {
         const product = products.find((p) => p.id === item.productId);
-        
-        // Type-safe assertion since we already validated all products exist
-        if (!product) {
-          throw new Error(`Produk dengan ID ${item.productId} tidak ditemukan`);
-        }
+        if (!product) throw new Error("Produk tidak ditemukan");
 
         if (product.stock < item.qty) {
           throw new Error(`Stok tidak cukup: ${product.name}`);
@@ -104,22 +108,38 @@ export async function POST(req: Request) {
         const subtotal = product.sellPrice * item.qty;
         totalAmount += subtotal;
 
+        // Tentukan harga beli berdasarkan ownership type
+        let buyPrice = 0;
+        
+        if (product.ownershipType === OwnershipType.OWN) {
+          // Untuk produk sendiri, ambil buyPrice dari produk
+          // Jika buyPrice null, gunakan default (misal: 70% dari harga jual)
+          buyPrice = product.buyPrice ?? Math.round(product.sellPrice * 0.7);
+        } else {
+          // Untuk produk konsinyasi, harga beli = 0 (karena bukan milik kita)
+          buyPrice = 0;
+        }
+
+        const profit = (product.sellPrice - buyPrice) * item.qty;
+
         return {
           product: {
             id: product.id,
             name: product.name,
             sellPrice: product.sellPrice,
+            buyPrice: product.buyPrice, // Bisa null
             stock: product.stock,
             ownershipType: product.ownershipType,
             partnerId: product.partnerId,
           },
           qty: item.qty,
           subtotal,
+          buyPriceSnap: buyPrice, // Selalu ada nilai (tidak null)
+          profit,
         };
       });
 
-      // ===== CREATE TRANSACTION =====
-      // 🔐 Simpan ID ke transaction.create
+      /* === CREATE TRANSACTION === */
       const trx = await tx.transaction.create({
         data: {
           paymentType,
@@ -128,15 +148,17 @@ export async function POST(req: Request) {
         },
       });
 
-      // ===== ITEM + STOK + TITIPAN =====
+      /* === ITEM + STOK + KONSINYASI === */
       for (const item of computedItems) {
         await tx.transactionItem.create({
           data: {
             transactionId: trx.id,
             productId: item.product.id,
             qty: item.qty,
+            buyPriceSnap: item.buyPriceSnap,
             sellPriceSnap: item.product.sellPrice,
             subtotal: item.subtotal,
+            profit: item.profit,
           },
         });
 
@@ -160,11 +182,11 @@ export async function POST(req: Request) {
         }
       }
 
-      // ===== DEBT =====
+      /* === DEBT === */
       if (paymentType === PaymentType.DEBT) {
         await tx.debt.create({
           data: {
-            customerName: customerName!, // Non-null assertion since we validated above
+            customerName: customerName!,
             transactionId: trx.id,
             amount: totalAmount,
             status: DebtStatus.UNPAID,
@@ -172,7 +194,6 @@ export async function POST(req: Request) {
         });
       }
 
-      // 🧾 Tambahkan LOGGING MINIMAL (WORTH IT)
       console.log(
         `[TRANSACTION OK] ${trx.id} | ${paymentType} | Total: ${totalAmount}`
       );
@@ -184,16 +205,10 @@ export async function POST(req: Request) {
       success: true,
       transactionId: transaction.id,
     });
-  } catch (error: unknown) {
-    // 🧾 Tambahkan LOGGING MINIMAL (WORTH IT)
+  } catch (error) {
     console.error("[TRANSACTION FAILED]", error);
-    
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : "Transaksi gagal";
-    
     return NextResponse.json(
-      { error: errorMessage },
+      { error: error instanceof Error ? error.message : "Transaksi gagal" },
       { status: 500 }
     );
   }
