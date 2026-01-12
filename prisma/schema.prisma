@@ -78,7 +78,7 @@ model ConsignmentPartner {
 model ProductBatch {
   id          String   @id @default(uuid())
   productId   String
-  expiredAt   DateTime
+  expiredAt   DateTime?  // ⬅️ Jadikan nullable
   stock       Int
   buyPrice    Int
 

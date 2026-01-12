@@ -11,6 +11,7 @@ interface ProductRequestBody {
   stock: number;
   ownershipType: OwnershipType;
   partnerId?: string;
+  expiredAt?: string; // ISO string format: "2024-12-31T23:59:59.999Z"
 }
 
 export async function POST(req: Request) {
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
       stock,
       ownershipType,
       partnerId,
+      expiredAt,
     } = body;
 
     // Validasi field wajib
@@ -62,6 +64,18 @@ export async function POST(req: Request) {
       );
     }
 
+    // Parse expiredAt jika ada
+    let expiredDate: Date | null = null;
+    if (expiredAt) {
+      expiredDate = new Date(expiredAt);
+      if (isNaN(expiredDate.getTime())) {
+        return NextResponse.json(
+          { error: "Format tanggal kadaluarsa tidak valid. Gunakan format ISO" },
+          { status: 400 }
+        );
+      }
+    }
+
     const product = await prisma.product.create({
       data: {
         name,
@@ -85,7 +99,7 @@ export async function POST(req: Request) {
           productId: product.id,
           buyPrice: finalBuyPrice,
           stock: stock,
-          expiredAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default: 1 tahun dari sekarang
+          expiredAt: expiredDate, // Bisa null atau tanggal tertentu
         },
       });
     }
@@ -116,7 +130,6 @@ export async function GET() {
           }
         },
         batches: {
-          take: 1,
           orderBy: {
             createdAt: 'desc'
           }
