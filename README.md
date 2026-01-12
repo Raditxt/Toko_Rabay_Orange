@@ -16,24 +16,33 @@ Operational system for family/home store (MVP v1) with focus on:
 
 1. **Product Master**
 
-   * Name, category, selling price, stock, ownership type
+   * Name, category, selling price, stock, ownership type, product batches
 
 2. **Quick Sales**
 
    * Input qty → automatic stock update
    * Choose CASH / CREDIT
+   * Profit calculation per transaction
 
 3. **Credit / Debt**
 
    * Automatically recorded from transactions
+   * Debt management API
 
 4. **Consignment**
 
-   * Partner + separate balance
+   * Partner management + separate balance
+   * Consignment reports
 
 5. **Concise Dashboard**
 
-   * Critical stock, today's sales, consignment balance, active credits
+   * Critical stock alerts, today's sales, consignment balance, active credits
+   * Dashboard summary and alerts API
+
+6. **Reports**
+
+   * Daily sales reports
+   * Consignment partner reports
 
 ---
 
@@ -80,14 +89,27 @@ npm run dev
 
 ```text
 app/
-  ├─ page.tsx          // Dashboard
-  ├─ products/         // Product Master CRUD
-  ├─ sales/            // Transaction input
-  └─ api/              // API endpoints
+  ├─ page.tsx              // Main Dashboard
+  ├─ products/             // Product Master CRUD Page
+  ├─ sales/                // Transaction Input Page
+  └─ api/                  // API Endpoints
+      ├─ consignment-partners/
+      ├─ dashboard/
+      │   ├─ alerts/
+      │   └─ summary/
+      ├─ debts/
+      ├─ products/
+      ├─ reports/
+      │   ├─ consignment/
+      │   └─ daily/
+      └─ transactions/
 lib/
-  └─ prisma.ts         // Prisma client
+  ├─ constants.ts          // App constants
+  └─ prisma.ts             // Prisma client
 prisma/
-  └─ schema.prisma     // Database schema
+  ├─ schema.prisma         // Database schema
+  └─ migrations/           // Database migrations
+public/                    // Static assets
 ```
 
 ---
@@ -108,14 +130,18 @@ prisma/
 * [x] Implement Credit / Consignment
 * [x] Minimal UI for daily transactions
 * [x] Concise dashboard
-* [ ] **Phase 2**: analytical reports, expiration tracking, purchase price, notifications
+* [x] Basic reports (daily sales, consignment)
+* [x] Product batch tracking
+* [x] Profit calculation
+* [ ] **Phase 2**: Advanced analytical reports, expiration tracking, purchase price, notifications
 
 ---
 
 ## 📝 Changelog
 
-* **January 8, 2026**: Implemented API endpoints for products, transactions, debts, and consignment partners. Added pages for products and sales management. Updated README to reflect completed MVP v1 features.
+* **January 12, 2026**: Added product batch tracking for better inventory management. Implemented profit calculation for transaction items. Enhanced API endpoints for reports (daily and consignment).
 * **January 9, 2026**: Added mobile-first sales page UI and concise dashboard for critical stock, consignment balance, active credits.
+* **January 8, 2026**: Implemented API endpoints for products, transactions, debts, and consignment partners. Added pages for products and sales management. Updated README to reflect completed MVP v1 features.
 
 ---
 
@@ -158,11 +184,11 @@ prisma/
 2. You can see who owes money and how much
 3. When customer pays, click **"Record Payment"**
 
-### Consignment Products
+### Checking Reports
 
-1. Products owned by partners/suppliers
-2. When sold, profit goes to consignment balance
-3. Check balance in **"Consignment"** menu
+1. Go to **"Reports"** menu
+2. View **Daily Sales** report for today's transactions
+3. View **Consignment** report for partner balances and profits
 
 ---
 
