@@ -44,6 +44,19 @@ Operational system for family/home store (MVP v1) with focus on:
    * Daily sales reports
    * Consignment partner reports
 
+7. **Alerts**
+
+   * Stock alerts (low/critical stock levels)
+   * Expired product alerts (products expiring soon)
+
+8. **Export**
+
+   * Daily sales report export in CSV format
+
+9. **Audit Logging**
+
+   * Automatic logging of key actions (transactions, product updates, etc.)
+
 ---
 
 ## 🛠️ Setup & Development
@@ -93,11 +106,16 @@ app/
   ├─ products/             // Product Master CRUD Page
   ├─ sales/                // Transaction Input Page
   └─ api/                  // API Endpoints
+      ├─ alerts/
+      │   ├─ expired/
+      │   └─ stock/
       ├─ consignment-partners/
       ├─ dashboard/
       │   ├─ alerts/
       │   └─ summary/
       ├─ debts/
+      ├─ export/
+      │   └─ daily/
       ├─ products/
       ├─ reports/
       │   ├─ consignment/
@@ -139,9 +157,11 @@ public/                    // Static assets
 
 ## 📝 Changelog
 
+* **January 13, 2026**: Added Alerts API for stock (low/critical) and expired products. Implemented Export API for daily sales reports in CSV format. Added Audit Logging for key actions and updated the database schema with the AuditLog table.
 * **January 12, 2026**: Added product batch tracking for better inventory management. Implemented profit calculation for transaction items. Enhanced API endpoints for reports (daily and consignment).
 * **January 9, 2026**: Added mobile-first sales page UI and concise dashboard for critical stock, consignment balance, active credits.
 * **January 8, 2026**: Implemented API endpoints for products, transactions, debts, and consignment partners. Added pages for products and sales management. Updated README to reflect completed MVP v1 features.
+
 
 ---
 
