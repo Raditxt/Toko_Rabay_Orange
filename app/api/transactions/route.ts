@@ -6,6 +6,7 @@ import {
   PaymentType,
   OwnershipType,
   DebtStatus,
+  Transaction,
 } from "@/app/generated/prisma/client";
 
 /* =====================
@@ -29,15 +30,21 @@ interface ComputedTransactionItem {
     id: string;
     name: string;
     sellPrice: number;
-    buyPrice: number | null; // ⬅️ Update: bisa null
+    buyPrice: number | null;
     stock: number;
     ownershipType: OwnershipType;
     partnerId: string | null;
   };
   qty: number;
   subtotal: number;
-  buyPriceSnap: number; // ⬅️ Untuk transaksi, harus ada nilai
+  buyPriceSnap: number;
   profit: number;
+}
+
+// Extended interface untuk hasil transaction dengan data tambahan
+interface TransactionResult extends Transaction {
+  totalProfit: number;
+  itemCount: number;
 }
 
 /* =====================
@@ -47,7 +54,7 @@ interface ComputedTransactionItem {
 export async function POST(req: Request) {
   try {
     const body: TransactionRequestBody = await req.json();
-    const { paymentType, customerName, items } = body;
+    const { paymentType, customerName, items, clientTransactionId } = body;
 
     /* ===== VALIDASI DASAR ===== */
     if (!paymentType || !Array.isArray(items) || items.length === 0) {
@@ -72,11 +79,11 @@ export async function POST(req: Request) {
     }
 
     /* ===== ATOMIC TRANSACTION ===== */
-    const transaction = await prisma.$transaction(async (tx) => {
+    const transactionResult = await prisma.$transaction(async (tx): Promise<TransactionResult> => {
       /* === ANTI DOUBLE SUBMIT === */
-      if (body.clientTransactionId) {
+      if (clientTransactionId) {
         const exists = await tx.transaction.findFirst({
-          where: { clientTransactionId: body.clientTransactionId },
+          where: { clientTransactionId },
         });
 
         if (exists) {
@@ -88,6 +95,14 @@ export async function POST(req: Request) {
 
       const products = await tx.product.findMany({
         where: { id: { in: productIds } },
+        include: {
+          partner: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
       });
 
       if (products.length !== productIds.length) {
@@ -95,6 +110,7 @@ export async function POST(req: Request) {
       }
 
       let totalAmount = 0;
+      let totalProfit = 0;
 
       /* === HITUNG SNAPSHOT ITEM === */
       const computedItems: ComputedTransactionItem[] = items.map((item) => {
@@ -108,34 +124,29 @@ export async function POST(req: Request) {
         const subtotal = product.sellPrice * item.qty;
         totalAmount += subtotal;
 
-        // Tentukan harga beli berdasarkan ownership type
-        let buyPrice = 0;
-        
-        if (product.ownershipType === OwnershipType.OWN) {
-          // Untuk produk sendiri, ambil buyPrice dari produk
-          // Jika buyPrice null, gunakan default (misal: 70% dari harga jual)
-          buyPrice = product.buyPrice ?? Math.round(product.sellPrice * 0.7);
-        } else {
-          // Untuk produk konsinyasi, harga beli = 0 (karena bukan milik kita)
-          buyPrice = 0;
-        }
+        // HITUNG PROFIT sesuai permintaan
+        const buyPrice =
+          product.ownershipType === OwnershipType.OWN
+            ? product.buyPrice ?? 0
+            : 0;
 
         const profit = (product.sellPrice - buyPrice) * item.qty;
+        totalProfit += profit;
 
         return {
           product: {
             id: product.id,
             name: product.name,
             sellPrice: product.sellPrice,
-            buyPrice: product.buyPrice, // Bisa null
+            buyPrice: product.buyPrice,
             stock: product.stock,
             ownershipType: product.ownershipType,
             partnerId: product.partnerId,
           },
           qty: item.qty,
           subtotal,
-          buyPriceSnap: buyPrice, // Selalu ada nilai (tidak null)
-          profit,
+          buyPriceSnap: buyPrice, // SIMPAN buyPriceSnap
+          profit, // SIMPAN profit
         };
       });
 
@@ -144,7 +155,7 @@ export async function POST(req: Request) {
         data: {
           paymentType,
           totalAmount,
-          clientTransactionId: body.clientTransactionId,
+          clientTransactionId, // SIMPAN clientTransactionId
         },
       });
 
@@ -194,16 +205,56 @@ export async function POST(req: Request) {
         });
       }
 
+      /* === CREATE AUDIT LOG === */
+      await tx.auditLog.create({
+        data: {
+          action: "CREATE_TRANSACTION",
+          entity: "Transaction",
+          entityId: trx.id,
+          meta: {
+            totalAmount,
+            totalProfit,
+            paymentType,
+            itemCount: items.length,
+            customerName: customerName || null,
+            clientTransactionId: clientTransactionId || null,
+            items: computedItems.map(item => ({
+              productId: item.product.id,
+              productName: item.product.name,
+              qty: item.qty,
+              sellPrice: item.product.sellPrice,
+              buyPriceSnap: item.buyPriceSnap,
+              subtotal: item.subtotal,
+              profit: item.profit,
+            })),
+          },
+        },
+      });
+
       console.log(
-        `[TRANSACTION OK] ${trx.id} | ${paymentType} | Total: ${totalAmount}`
+        `[TRANSACTION OK] ${trx.id} | ${paymentType} | ` +
+        `Total: ${totalAmount} | Profit: ${totalProfit} | ` +
+        `Items: ${items.length} | ClientTxID: ${clientTransactionId || 'none'}`
       );
 
-      return trx;
+      // Return transaction dengan data tambahan
+      return {
+        ...trx,
+        totalProfit,
+        itemCount: items.length,
+      } as TransactionResult;
     });
+
+    // Type assertion yang aman karena kita tahu transactionResult adalah TransactionResult
+    const result = transactionResult as TransactionResult;
 
     return NextResponse.json({
       success: true,
-      transactionId: transaction.id,
+      transactionId: result.id,
+      totalAmount: result.totalAmount,
+      totalProfit: result.totalProfit,
+      itemCount: result.itemCount,
+      clientTransactionId: result.clientTransactionId,
     });
   } catch (error) {
     console.error("[TRANSACTION FAILED]", error);

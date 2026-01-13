@@ -16,6 +16,8 @@ model Product {
   stock         Int
   ownershipType OwnershipType
   partnerId     String?
+  isActive      Boolean @default(true)
+  minStock      Int @default(5)
 
   partner       ConsignmentPartner? @relation(fields: [partnerId], references: [id])
   items         TransactionItem[]
@@ -85,6 +87,19 @@ model ProductBatch {
   product     Product  @relation(fields: [productId], references: [id])
 
   createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String   // Contoh: "CREATE_TRANSACTION", "UPDATE_PRODUCT", etc
+  entity    String   // Contoh: "Transaction", "Product", "Debt"
+  entityId  String
+  meta      Json?    // Data tambahan dalam format JSON
+  userId    String?  // Jika ada user authentication
+  userAgent String?
+  ipAddress String?
+
+  createdAt DateTime @default(now())
 }
 
 enum PaymentType {
