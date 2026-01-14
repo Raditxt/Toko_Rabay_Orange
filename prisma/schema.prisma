@@ -28,16 +28,16 @@ model Product {
 }
 
 model Transaction {
-  id                   String   @id @default(uuid())
-  clientTransactionId   String?  @unique
-  date                 DateTime @default(now())
-  totalAmount          Int
-  paymentType          PaymentType
+  id                 String   @id @default(uuid())
+  clientTransactionId String?  @unique
+  date               DateTime @default(now())
+  totalAmount        Int
+  paymentType        PaymentType
 
-  items                TransactionItem[]
-  debt                 Debt?
+  items              TransactionItem[]
+  debt               Debt?
 
-  createdAt            DateTime @default(now())
+  createdAt          DateTime @default(now())
 }
 
 model TransactionItem {
@@ -102,6 +102,15 @@ model AuditLog {
   createdAt DateTime @default(now())
 }
 
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  role      UserRole
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
 enum PaymentType {
   CASH
   DEBT
@@ -115,4 +124,9 @@ enum OwnershipType {
 enum DebtStatus {
   UNPAID
   PAID
+}
+
+enum UserRole {
+  OWNER
+  CASHIER
 }
