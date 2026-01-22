@@ -14,10 +14,10 @@ model Product {
   buyPrice      Int?     // ⬅️ Jadikan nullable dulu
   sellPrice     Int
   stock         Int
+  minStock      Int      @default(5)
   ownershipType OwnershipType
   partnerId     String?
-  isActive      Boolean @default(true)
-  minStock      Int @default(5)
+  isActive      Boolean  @default(true)
 
   partner       ConsignmentPartner? @relation(fields: [partnerId], references: [id])
   items         TransactionItem[]
@@ -104,10 +104,11 @@ model AuditLog {
 
 model User {
   id        String   @id @default(uuid())
-  username  String   @unique
+  name      String
+  email     String   @unique
   password  String
   role      UserRole
-  isActive  Boolean  @default(true)
+
   createdAt DateTime @default(now())
 }
 
